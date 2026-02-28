@@ -64,7 +64,7 @@ export class GeminiService {
       console.warn("Could not fetch API key from Firestore:", e);
     }
     
-    return envKey || "";
+    return "";
   }
 
   private async getAI(): Promise<GoogleGenAI> {
