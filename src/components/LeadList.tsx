@@ -52,6 +52,33 @@ export const LeadList: React.FC<LeadListProps> = ({
     }
   });
   const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
+  const [exportDropdownId, setExportDropdownId] = useState<string | null>(null);
+
+  const exportLeadCSV = useCallback((lead: Lead) => {
+    const headers = ['Name','Industry','Location','Country','Rating','Reviews','Phone','Email','Website','Status','Contact Name','Contact Role'];
+    const row = [lead.name, lead.industry, lead.location, lead.country, lead.rating||'', lead.reviews||'', lead.phone||'', lead.email||'', lead.website||'', lead.status, lead.contactName||'', lead.contactRole||''];
+    const csv = [headers.join(','), row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `${lead.name.replace(/\s+/g,'_')}_lead.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const exportLeadXLS = useCallback((lead: Lead) => {
+    const xml = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Lead"><Table><Row><Cell><Data ss:Type="String">Name</Data></Cell><Cell><Data ss:Type="String">Industry</Data></Cell><Cell><Data ss:Type="String">Location</Data></Cell><Cell><Data ss:Type="String">Country</Data></Cell><Cell><Data ss:Type="String">Rating</Data></Cell><Cell><Data ss:Type="String">Phone</Data></Cell><Cell><Data ss:Type="String">Email</Data></Cell><Cell><Data ss:Type="String">Website</Data></Cell><Cell><Data ss:Type="String">Status</Data></Cell></Row><Row><Cell><Data ss:Type="String">${lead.name}</Data></Cell><Cell><Data ss:Type="String">${lead.industry}</Data></Cell><Cell><Data ss:Type="String">${lead.location}</Data></Cell><Cell><Data ss:Type="String">${lead.country}</Data></Cell><Cell><Data ss:Type="Number">${lead.rating||0}</Data></Cell><Cell><Data ss:Type="String">${lead.phone||''}</Data></Cell><Cell><Data ss:Type="String">${lead.email||''}</Data></Cell><Cell><Data ss:Type="String">${lead.website||''}</Data></Cell><Cell><Data ss:Type="String">${lead.status}</Data></Cell></Row></Table></Worksheet></Workbook>`;
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `${lead.name.replace(/\s+/g,'_')}_lead.xls`; a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const exportLeadGoogleSheets = useCallback((lead: Lead) => {
+    const headers = ['Name','Industry','Location','Country','Rating','Reviews','Phone','Email','Website','Status','Contact Name','Contact Role'];
+    const row = [lead.name, lead.industry, lead.location, lead.country, lead.rating||'', lead.reviews||'', lead.phone||'', lead.email||'', lead.website||'', lead.status, lead.contactName||'', lead.contactRole||''];
+    const tsv = [headers.join('\t'), row.map(v => String(v)).join('\t')].join('\n');
+    navigator.clipboard.writeText(tsv);
+    window.open('https://sheets.google.com/create', '_blank');
+  }, []);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
