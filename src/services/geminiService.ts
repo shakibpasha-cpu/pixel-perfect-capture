@@ -416,12 +416,17 @@ export class GeminiService {
   }
 
   async findLeads(query: string, location?: string, country?: string, area?: string, radius: number = 25, filters?: any): Promise<Lead[]> {
+    console.log("[GeminiService] findLeads called, getting AI instance...");
     const ai = await this.getAI();
+    console.log("[GeminiService] AI instance ready, getting location...");
     let latLng = undefined;
     try {
       const pos = await getPosition();
       latLng = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-    } catch (e) {}
+      console.log("[GeminiService] Got location:", latLng);
+    } catch (e) {
+      console.log("[GeminiService] Location unavailable, continuing without it");
+    }
 
     const searchContext = [area, location, country].filter(Boolean).join(', ');
     
@@ -442,12 +447,14 @@ export class GeminiService {
       prompt += ` Identify the ${filters.targetRole} as the primary contact person for each lead found.`;
     }
 
+    console.log("[GeminiService] Calling Google Maps grounding...");
     // Google Maps grounding works best with 2.5-flash
     const mapsResponse = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: { tools: [{ googleMaps: {} }], toolConfig: latLng ? { retrievalConfig: { latLng } } : undefined },
     });
+    console.log("[GeminiService] Maps response received, length:", mapsResponse.text?.length || 0);
 
     const extractionResponse = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -481,9 +488,11 @@ export class GeminiService {
         }
       }
     });
+    console.log("[GeminiService] Extraction response received");
 
     try {
       const parsed = JSON.parse(this.cleanJsonString(extractionResponse.text || '{"leads":[]}'));
+      console.log("[GeminiService] Parsed leads count:", parsed.leads?.length || 0);
       return (parsed.leads || []).map((l: any, index: number) => ({
         ...l,
         id: `lead-${Date.now()}-${index}`,
@@ -494,7 +503,7 @@ export class GeminiService {
         sourceType: 'google_maps',
       }));
     } catch (e) { 
-      console.error("Lead extraction failed:", e);
+      console.error("[GeminiService] Lead extraction failed:", e);
       return []; 
     }
   }
