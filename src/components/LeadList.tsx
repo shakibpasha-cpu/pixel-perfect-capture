@@ -849,11 +849,42 @@ export const LeadList: React.FC<LeadListProps> = ({
                     <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">{lead.sourceType === 'google_maps' ? 'Verified Maps Node' : 'Web Intelligence Node'}</span>
                  </div>
               </div>
-              <div className="w-px h-10 bg-slate-200 hidden sm:block"></div>
-              <button className="text-[11px] font-black text-[#2160fd] hover:text-[#101828] uppercase tracking-[0.2em] flex items-center gap-3 transition-colors active:scale-95">
-                 <i className="fas fa-cloud-arrow-down"></i>
-                 Export Records
-              </button>
+               <div className="w-px h-10 bg-slate-200 hidden sm:block"></div>
+               <div className="relative">
+                 <button 
+                   onClick={(e) => { e.stopPropagation(); setExportDropdownId(exportDropdownId === lead.id ? null : lead.id); }}
+                   className="text-[11px] font-black text-[#2160fd] hover:text-[#101828] uppercase tracking-[0.2em] flex items-center gap-3 transition-colors active:scale-95"
+                 >
+                   <i className="fas fa-cloud-arrow-down"></i>
+                   Export Records
+                   <i className={`fas fa-chevron-down text-[8px] transition-transform ${exportDropdownId === lead.id ? 'rotate-180' : ''}`}></i>
+                 </button>
+                 {exportDropdownId === lead.id && (
+                   <div className="absolute bottom-full right-0 mb-2 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 min-w-[200px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                     <button
+                       onClick={(e) => { e.stopPropagation(); exportLeadCSV(lead); setExportDropdownId(null); }}
+                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all"
+                     >
+                       <i className="fas fa-file-csv text-emerald-500"></i>
+                       Export CSV
+                     </button>
+                     <button
+                       onClick={(e) => { e.stopPropagation(); exportLeadXLS(lead); setExportDropdownId(null); }}
+                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-all"
+                     >
+                       <i className="fas fa-file-excel text-blue-500"></i>
+                       Export XLS
+                     </button>
+                     <button
+                       onClick={(e) => { e.stopPropagation(); exportLeadGoogleSheets(lead); setExportDropdownId(null); }}
+                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-green-50 hover:text-green-700 transition-all"
+                     >
+                       <i className="fab fa-google text-green-500"></i>
+                       Google Sheets
+                     </button>
+                   </div>
+                 )}
+               </div>
            </div>
         </div>
       </div>
