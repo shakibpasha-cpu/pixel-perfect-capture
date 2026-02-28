@@ -53,6 +53,39 @@ export const LeadList: React.FC<LeadListProps> = ({
   });
   const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
   const [exportDropdownId, setExportDropdownId] = useState<string | null>(null);
+  const [showExportAll, setShowExportAll] = useState(false);
+  const exportBtnRef = useRef<HTMLButtonElement>(null);
+  const exportCardBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [exportDropdownPos, setExportDropdownPos] = useState<{top: number; left: number} | null>(null);
+  const [exportAllPos, setExportAllPos] = useState<{top: number; left: number} | null>(null);
+
+  const exportAllCSV = useCallback(() => {
+    const headers = ['Name','Industry','Location','Country','Rating','Reviews','Phone','Email','Website','Status','Contact Name','Contact Role'];
+    const rows = leads.map(l => [l.name, l.industry, l.location, l.country, l.rating||'', l.reviews||'', l.phone||'', l.email||'', l.website||'', l.status, l.contactName||'', l.contactRole||'']);
+    const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `all_leads_export.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }, [leads]);
+
+  const exportAllXLS = useCallback(() => {
+    const headerCells = ['Name','Industry','Location','Country','Rating','Phone','Email','Website','Status'].map(h => `<Cell><Data ss:Type="String">${h}</Data></Cell>`).join('');
+    const dataRows = leads.map(l => `<Row><Cell><Data ss:Type="String">${l.name}</Data></Cell><Cell><Data ss:Type="String">${l.industry}</Data></Cell><Cell><Data ss:Type="String">${l.location}</Data></Cell><Cell><Data ss:Type="String">${l.country}</Data></Cell><Cell><Data ss:Type="Number">${l.rating||0}</Data></Cell><Cell><Data ss:Type="String">${l.phone||''}</Data></Cell><Cell><Data ss:Type="String">${l.email||''}</Data></Cell><Cell><Data ss:Type="String">${l.website||''}</Data></Cell><Cell><Data ss:Type="String">${l.status}</Data></Cell></Row>`).join('');
+    const xml = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Leads"><Table><Row>${headerCells}</Row>${dataRows}</Table></Worksheet></Workbook>`;
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `all_leads_export.xls`; a.click();
+    URL.revokeObjectURL(url);
+  }, [leads]);
+
+  const exportAllGoogleSheets = useCallback(() => {
+    const headers = ['Name','Industry','Location','Country','Rating','Reviews','Phone','Email','Website','Status','Contact Name','Contact Role'];
+    const rows = leads.map(l => [l.name, l.industry, l.location, l.country, l.rating||'', l.reviews||'', l.phone||'', l.email||'', l.website||'', l.status, l.contactName||'', l.contactRole||''].map(v => String(v)).join('\t'));
+    const tsv = [headers.join('\t'), ...rows].join('\n');
+    navigator.clipboard.writeText(tsv);
+    window.open('https://sheets.google.com/create', '_blank');
+  }, [leads]);
 
   const exportLeadCSV = useCallback((lead: Lead) => {
     const headers = ['Name','Industry','Location','Country','Rating','Reviews','Phone','Email','Website','Status','Contact Name','Contact Role'];
