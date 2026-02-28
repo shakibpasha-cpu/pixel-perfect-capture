@@ -45,8 +45,8 @@ export class GeminiService {
   private async getApiKey(): Promise<string> {
     if (this.cachedKey) return this.cachedKey;
 
-    // Check environment variable first
-    const envKey = process.env.API_KEY;
+    // Check environment variable first (Vite uses import.meta.env)
+    const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
     if (envKey && envKey !== 'PLACEHOLDER_API_KEY' && !envKey.includes('PLACEHOLDER')) {
       this.cachedKey = envKey;
       return envKey;
@@ -64,7 +64,7 @@ export class GeminiService {
       console.warn("Could not fetch API key from Firestore:", e);
     }
     
-    return envKey || "";
+    return "";
   }
 
   private async getAI(): Promise<GoogleGenAI> {
