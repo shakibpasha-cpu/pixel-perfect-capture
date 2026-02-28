@@ -1285,44 +1285,58 @@ export const LeadList: React.FC<LeadListProps> = ({
           })}
         </div>
       )}
-      {/* Export Dropdown Portal - rendered outside overflow-hidden containers */}
-      {exportDropdownId && (() => {
+      {/* Export Dropdown Portal - positioned near button */}
+      {exportDropdownId && exportDropdownPos && (() => {
         const targetLead = leads.find(l => l.id === exportDropdownId);
         if (!targetLead) return null;
         return (
           <>
-            <div className="fixed inset-0 z-[9998]" onClick={() => setExportDropdownId(null)} />
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
-              <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 min-w-[240px] pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
-                <div className="px-4 py-2 mb-1">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Export: {targetLead.name}</p>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); exportLeadCSV(targetLead); setExportDropdownId(null); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all"
-                >
-                  <i className="fas fa-file-csv text-emerald-500"></i>
-                  Export CSV
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); exportLeadXLS(targetLead); setExportDropdownId(null); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-all"
-                >
-                  <i className="fas fa-file-excel text-blue-500"></i>
-                  Export XLS
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); exportLeadGoogleSheets(targetLead); setExportDropdownId(null); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-green-50 hover:text-green-700 transition-all"
-                >
-                  <i className="fab fa-google text-green-500"></i>
-                  Google Sheets
-                </button>
+            <div className="fixed inset-0 z-[9998]" onClick={() => { setExportDropdownId(null); setExportDropdownPos(null); }} />
+            <div className="fixed z-[9999] bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 min-w-[240px] animate-in fade-in zoom-in-95 duration-200"
+              style={{ top: exportDropdownPos.top, left: exportDropdownPos.left }}>
+              <div className="px-4 py-2 mb-1">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Export: {targetLead.name}</p>
               </div>
+              <button onClick={(e) => { e.stopPropagation(); exportLeadCSV(targetLead); setExportDropdownId(null); setExportDropdownPos(null); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all">
+                <i className="fas fa-file-csv text-emerald-500"></i> Export CSV
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); exportLeadXLS(targetLead); setExportDropdownId(null); setExportDropdownPos(null); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-all">
+                <i className="fas fa-file-excel text-blue-500"></i> Export XLS
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); exportLeadGoogleSheets(targetLead); setExportDropdownId(null); setExportDropdownPos(null); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-green-50 hover:text-green-700 transition-all">
+                <i className="fab fa-google text-green-500"></i> Google Sheets
+              </button>
             </div>
           </>
         );
       })()}
+      {/* Export All Dropdown Portal */}
+      {showExportAll && exportAllPos && (
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => { setShowExportAll(false); setExportAllPos(null); }} />
+          <div className="fixed z-[9999] bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 min-w-[240px] animate-in fade-in zoom-in-95 duration-200"
+            style={{ top: exportAllPos.top, left: exportAllPos.left }}>
+            <div className="px-4 py-2 mb-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Export All ({leads.length} leads)</p>
+            </div>
+            <button onClick={() => { exportAllCSV(); setShowExportAll(false); setExportAllPos(null); }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all">
+              <i className="fas fa-file-csv text-emerald-500"></i> Export CSV
+            </button>
+            <button onClick={() => { exportAllXLS(); setShowExportAll(false); setExportAllPos(null); }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-all">
+              <i className="fas fa-file-excel text-blue-500"></i> Export XLS
+            </button>
+            <button onClick={() => { exportAllGoogleSheets(); setShowExportAll(false); setExportAllPos(null); }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-green-50 hover:text-green-700 transition-all">
+              <i className="fab fa-google text-green-500"></i> Google Sheets
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
