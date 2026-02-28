@@ -969,7 +969,29 @@ export const LeadList: React.FC<LeadListProps> = ({
               <i className="fas fa-map-pin"></i>
               Spatial
             </button>
-          </div>
+           </div>
+
+           {/* Export All Button */}
+           <div className="relative">
+             <button
+               ref={exportBtnRef}
+               onClick={() => {
+                 if (showExportAll) {
+                   setShowExportAll(false);
+                   setExportAllPos(null);
+                 } else {
+                   const rect = exportBtnRef.current?.getBoundingClientRect();
+                   if (rect) setExportAllPos({ top: rect.bottom + 6, left: Math.min(rect.left, window.innerWidth - 260) });
+                   setShowExportAll(true);
+                 }
+               }}
+               className="flex items-center gap-2.5 px-6 py-2.5 bg-[#101828] text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] hover:bg-[#2160fd] transition-all shadow-lg active:scale-95"
+             >
+               <i className="fas fa-cloud-arrow-down"></i>
+               Export All
+               <i className={`fas fa-chevron-down text-[8px] transition-transform ${showExportAll ? 'rotate-180' : ''}`}></i>
+             </button>
+           </div>
         </div>
       </div>
 
