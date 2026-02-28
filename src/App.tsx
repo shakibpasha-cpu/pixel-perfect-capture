@@ -163,7 +163,9 @@ const App: React.FC = () => {
     setCurrentView('leads');
     
     try {
+      console.log("[Search] Starting lead search with query:", query, "location:", location, "country:", country);
       const results = await gemini.findLeads(query, location, country, area, radius, filters);
+      console.log("[Search] Results received:", results.length);
       if (results.length === 0) {
         setSearchError("No results found. Try expanding your parameters.");
       } else {
@@ -179,8 +181,9 @@ const App: React.FC = () => {
         });
       }
     } catch (error: any) {
+      console.error("[Search] Lead search failed:", error);
       const handled = await handleApiKeyError(error);
-      if (!handled) setSearchError(error?.message || "Internal API error.");
+      if (!handled) setSearchError(error?.message || "Internal API error. Check console for details.");
     } finally {
       setIsSearching(false);
     }
