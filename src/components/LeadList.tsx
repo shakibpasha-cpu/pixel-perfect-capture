@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Lead, AnalysisType } from '../types';
 
 declare const L: any;
@@ -52,6 +52,33 @@ export const LeadList: React.FC<LeadListProps> = ({
     }
   });
   const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
+  const [exportDropdownId, setExportDropdownId] = useState<string | null>(null);
+
+  const exportLeadCSV = useCallback((lead: Lead) => {
+    const headers = ['Name','Industry','Location','Country','Rating','Reviews','Phone','Email','Website','Status','Contact Name','Contact Role'];
+    const row = [lead.name, lead.industry, lead.location, lead.country, lead.rating||'', lead.reviews||'', lead.phone||'', lead.email||'', lead.website||'', lead.status, lead.contactName||'', lead.contactRole||''];
+    const csv = [headers.join(','), row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `${lead.name.replace(/\s+/g,'_')}_lead.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const exportLeadXLS = useCallback((lead: Lead) => {
+    const xml = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Lead"><Table><Row><Cell><Data ss:Type="String">Name</Data></Cell><Cell><Data ss:Type="String">Industry</Data></Cell><Cell><Data ss:Type="String">Location</Data></Cell><Cell><Data ss:Type="String">Country</Data></Cell><Cell><Data ss:Type="String">Rating</Data></Cell><Cell><Data ss:Type="String">Phone</Data></Cell><Cell><Data ss:Type="String">Email</Data></Cell><Cell><Data ss:Type="String">Website</Data></Cell><Cell><Data ss:Type="String">Status</Data></Cell></Row><Row><Cell><Data ss:Type="String">${lead.name}</Data></Cell><Cell><Data ss:Type="String">${lead.industry}</Data></Cell><Cell><Data ss:Type="String">${lead.location}</Data></Cell><Cell><Data ss:Type="String">${lead.country}</Data></Cell><Cell><Data ss:Type="Number">${lead.rating||0}</Data></Cell><Cell><Data ss:Type="String">${lead.phone||''}</Data></Cell><Cell><Data ss:Type="String">${lead.email||''}</Data></Cell><Cell><Data ss:Type="String">${lead.website||''}</Data></Cell><Cell><Data ss:Type="String">${lead.status}</Data></Cell></Row></Table></Worksheet></Workbook>`;
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `${lead.name.replace(/\s+/g,'_')}_lead.xls`; a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const exportLeadGoogleSheets = useCallback((lead: Lead) => {
+    const headers = ['Name','Industry','Location','Country','Rating','Reviews','Phone','Email','Website','Status','Contact Name','Contact Role'];
+    const row = [lead.name, lead.industry, lead.location, lead.country, lead.rating||'', lead.reviews||'', lead.phone||'', lead.email||'', lead.website||'', lead.status, lead.contactName||'', lead.contactRole||''];
+    const tsv = [headers.join('\t'), row.map(v => String(v)).join('\t')].join('\n');
+    navigator.clipboard.writeText(tsv);
+    window.open('https://sheets.google.com/create', '_blank');
+  }, []);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -822,11 +849,42 @@ export const LeadList: React.FC<LeadListProps> = ({
                     <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">{lead.sourceType === 'google_maps' ? 'Verified Maps Node' : 'Web Intelligence Node'}</span>
                  </div>
               </div>
-              <div className="w-px h-10 bg-slate-200 hidden sm:block"></div>
-              <button className="text-[11px] font-black text-[#2160fd] hover:text-[#101828] uppercase tracking-[0.2em] flex items-center gap-3 transition-colors active:scale-95">
-                 <i className="fas fa-cloud-arrow-down"></i>
-                 Export Records
-              </button>
+               <div className="w-px h-10 bg-slate-200 hidden sm:block"></div>
+               <div className="relative">
+                 <button 
+                   onClick={(e) => { e.stopPropagation(); setExportDropdownId(exportDropdownId === lead.id ? null : lead.id); }}
+                   className="text-[11px] font-black text-[#2160fd] hover:text-[#101828] uppercase tracking-[0.2em] flex items-center gap-3 transition-colors active:scale-95"
+                 >
+                   <i className="fas fa-cloud-arrow-down"></i>
+                   Export Records
+                   <i className={`fas fa-chevron-down text-[8px] transition-transform ${exportDropdownId === lead.id ? 'rotate-180' : ''}`}></i>
+                 </button>
+                 {exportDropdownId === lead.id && (
+                   <div className="absolute bottom-full right-0 mb-2 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 min-w-[200px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                     <button
+                       onClick={(e) => { e.stopPropagation(); exportLeadCSV(lead); setExportDropdownId(null); }}
+                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all"
+                     >
+                       <i className="fas fa-file-csv text-emerald-500"></i>
+                       Export CSV
+                     </button>
+                     <button
+                       onClick={(e) => { e.stopPropagation(); exportLeadXLS(lead); setExportDropdownId(null); }}
+                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-all"
+                     >
+                       <i className="fas fa-file-excel text-blue-500"></i>
+                       Export XLS
+                     </button>
+                     <button
+                       onClick={(e) => { e.stopPropagation(); exportLeadGoogleSheets(lead); setExportDropdownId(null); }}
+                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-green-50 hover:text-green-700 transition-all"
+                     >
+                       <i className="fab fa-google text-green-500"></i>
+                       Google Sheets
+                     </button>
+                   </div>
+                 )}
+               </div>
            </div>
         </div>
       </div>
