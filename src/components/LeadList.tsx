@@ -884,8 +884,19 @@ export const LeadList: React.FC<LeadListProps> = ({
               </div>
                <div className="w-px h-10 bg-slate-200 hidden sm:block"></div>
                <div className="relative">
-                 <button 
-                   onClick={(e) => { e.stopPropagation(); setExportDropdownId(exportDropdownId === lead.id ? null : lead.id); }}
+                 <button
+                   ref={el => { exportCardBtnRefs.current[lead.id] = el; }}
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     if (exportDropdownId === lead.id) {
+                       setExportDropdownId(null);
+                       setExportDropdownPos(null);
+                     } else {
+                       const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                       setExportDropdownPos({ top: rect.bottom + 6, left: Math.min(rect.left, window.innerWidth - 260) });
+                       setExportDropdownId(lead.id);
+                     }
+                   }}
                    className="text-[11px] font-black text-[#2160fd] hover:text-[#101828] uppercase tracking-[0.2em] flex items-center gap-3 transition-colors active:scale-95"
                  >
                    <i className="fas fa-cloud-arrow-down"></i>
