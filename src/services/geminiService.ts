@@ -604,7 +604,7 @@ export class GeminiService {
     return JSON.parse(this.cleanJsonString(response.text || '{"score": 0, "verdict": "No Fit", "reasoning": "Qualification failed due to system error."}'));
   }
 
-  async enrichLead(lead: Lead): Promise<AnalysisResult> {
+  async enrichLead(lead: Lead, onRetry?: (attempt: number, waitSec: number) => void): Promise<AnalysisResult> {
     const ai = await this.getAI();
     const response = await this.generateWithRetry(ai, {
       model: "gemini-3-flash-preview",
