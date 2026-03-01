@@ -5,7 +5,6 @@ import { Lead, AnalysisResult, AnalysisType, EnrichmentSuggestion } from '../typ
 interface AnalysisPanelProps {
   lead: Lead;
   analysis: AnalysisResult | null;
-  analysisError?: string | null;
   isLoading: boolean;
   onRunAnalysis: (type: AnalysisType) => void;
   onUpdateLead: (lead: Lead) => void;
@@ -14,7 +13,7 @@ interface AnalysisPanelProps {
 }
 
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ 
-  lead, analysis, analysisError, isLoading, onRunAnalysis, onUpdateLead, onClose, onPushToQualification
+  lead, analysis, isLoading, onRunAnalysis, onUpdateLead, onClose, onPushToQualification
 }) => {
   const [activeTab, setActiveTab] = useState<'intelligence' | 'company_intel' | 'details'>('intelligence');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -122,15 +121,9 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                       </div>
                       <h4 className="text-3xl font-black text-white tracking-tighter mb-6">Deep Intelligence Grounding</h4>
                       <p className="text-slate-400 text-base font-medium mb-12 max-w-md mx-auto leading-relaxed">Execute a multi-stage grounding scan to extract decision-makers, revenue brackets, and operational scaling data.</p>
-                      {analysisError && (
-                        <div className="mb-8 rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 text-sm font-bold text-rose-700 max-w-xl mx-auto">
-                          <i className="fas fa-triangle-exclamation mr-2"></i>{analysisError}
-                        </div>
-                      )}
                       <button 
                         onClick={() => onRunAnalysis(AnalysisType.SEARCH)}
-                        disabled={isLoading}
-                        className="px-14 py-6 bg-blue-600 text-white rounded-[28px] font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-700 hover:shadow-[0_20px_40px_-10px_rgba(33,96,253,0.5)] transition-all flex items-center gap-5 mx-auto active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:hover:shadow-none"
+                        className="px-14 py-6 bg-blue-600 text-white rounded-[28px] font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-700 hover:shadow-[0_20px_40px_-10px_rgba(33,96,253,0.5)] transition-all flex items-center gap-5 mx-auto active:scale-95"
                       >
                         <i className="fas fa-tower-broadcast animate-pulse"></i> Initialize Full Discovery
                       </button>

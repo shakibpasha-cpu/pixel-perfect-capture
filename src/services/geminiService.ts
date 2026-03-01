@@ -79,53 +79,6 @@ export class GeminiService {
     return new GoogleGenAI({ apiKey });
   }
 
-  private async sleep(ms: number): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  private isRateLimitError(error: any): boolean {
-    const msg = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
-    return error?.status === 429 || msg.includes('"code":429') || msg.includes('RESOURCE_EXHAUSTED');
-  }
-
-  private isRetryableError(error: any): boolean {
-    if (this.isRateLimitError(error)) return true;
-    const status = error?.status;
-    return typeof status === 'number' && status >= 500;
-  }
-
-  private getRetryDelayMs(attempt: number): number {
-    const baseDelay = 5000;
-    const maxDelay = 60000;
-    const jitter = Math.floor(Math.random() * 2000);
-    return Math.min(maxDelay, baseDelay * (2 ** attempt) + jitter);
-  }
-
-  private async generateWithRetry(
-    ai: GoogleGenAI,
-    payload: any,
-    maxRetries: number = 5,
-    onRetry?: (attempt: number, waitSec: number) => void
-  ) {
-    let lastError: any;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        return await ai.models.generateContent(payload);
-      } catch (error) {
-        lastError = error;
-        if (attempt >= maxRetries || !this.isRetryableError(error)) break;
-        const waitMs = this.getRetryDelayMs(attempt);
-        const waitSec = Math.round(waitMs / 1000);
-        console.warn(`[GeminiService] Retry ${attempt + 1}/${maxRetries} after ${waitSec}s due to rate/temporary error.`);
-        onRetry?.(attempt + 1, waitSec);
-        await this.sleep(waitMs);
-      }
-    }
-
-    throw lastError;
-  }
-
   async suggestQualificationCriteria(context: string): Promise<AIQualificationCriteria> {
     const ai = await this.getAI();
     const response = await ai.models.generateContent({
@@ -604,9 +557,9 @@ export class GeminiService {
     return JSON.parse(this.cleanJsonString(response.text || '{"score": 0, "verdict": "No Fit", "reasoning": "Qualification failed due to system error."}'));
   }
 
-  async enrichLead(lead: Lead, onRetry?: (attempt: number, waitSec: number) => void): Promise<AnalysisResult> {
+  async enrichLead(lead: Lead): Promise<AnalysisResult> {
     const ai = await this.getAI();
-    const response = await this.generateWithRetry(ai, {
+    const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Deep search enrichment for: ${lead.name} in ${lead.location}.
       
@@ -712,7 +665,7 @@ export class GeminiService {
           required: ["summary", "enrichedData", "suggestions"]
         }
       }
-    }, 5, onRetry);
+    });
     
     try {
       const parsed = JSON.parse(this.cleanJsonString(response.text || '{}'));
