@@ -32,6 +32,7 @@ const SuperAdminView: React.FC = () => {
   const [globalKey, setGlobalKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
