@@ -83,6 +83,21 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
+    let authResolved = false;
+    
+    const resolveAuth = () => {
+      authResolved = true;
+      setIsAuthLoading(false);
+    };
+
+    // Safety timeout — if auth doesn't resolve in 5 seconds, show login
+    const timeout = setTimeout(() => {
+      if (!authResolved) {
+        console.warn("[Auth] Timeout reached, showing login screen.");
+        resolveAuth();
+      }
+    }, 5000);
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
@@ -105,7 +120,7 @@ const App: React.FC = () => {
         // Only clear user if we are not already in a manual demo session
         setUser((prev) => prev?.id === 'demo-user-123' ? prev : null);
       }
-      setIsAuthLoading(false);
+      resolveAuth();
     });
 
     // Then get initial session
@@ -113,10 +128,15 @@ const App: React.FC = () => {
       if (session?.user) {
         setUser(session.user);
       }
-      setIsAuthLoading(false);
+      resolveAuth();
+    }).catch(() => {
+      resolveAuth();
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleDemoLogin = () => {
