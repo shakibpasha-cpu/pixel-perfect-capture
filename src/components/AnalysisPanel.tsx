@@ -398,9 +398,9 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                     <div className="flex flex-wrap gap-3">
                        {data.techStack && data.techStack.length > 0 ? (
                          data.techStack.map((tech, i) => (
-                           <span key={i} className="px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold">
-                             {tech}
-                           </span>
+                            <span key={i} className="px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold">
+                              {toStr(tech)}
+                            </span>
                          ))
                        ) : (
                          <p className="text-xs font-medium text-slate-400 italic">Tech stack unidentified.</p>
