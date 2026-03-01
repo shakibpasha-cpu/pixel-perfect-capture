@@ -1,1 +1,7 @@
 project_id = "mgdduirsufkbydvmeeaq"
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.ai-proxy]
+verify_jwt = false
