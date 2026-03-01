@@ -118,6 +118,32 @@ const SuperAdminView: React.FC = () => {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newEmail || !newPassword) return alert("Email and password are required.");
+    setIsCreatingUser(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ email: newEmail, password: newPassword, display_name: newDisplayName }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to create user');
+      alert(`User ${newEmail} created successfully!`);
+      setNewEmail(''); setNewPassword(''); setNewDisplayName(''); setShowCreateUser(false);
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      alert(error.message || "Failed to create user.");
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
   const filteredUsers = users.filter(u => 
     u.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
     u.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
