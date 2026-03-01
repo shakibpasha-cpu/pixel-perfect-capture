@@ -127,30 +127,6 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
   const inputStyles = "w-full pl-12 pr-12 py-4 bg-[#f9fafb] border border-[#eaecf0] rounded-2xl text-[14px] font-bold text-[#101828] focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-[#2160fd] outline-none transition-all";
   const labelStyles = "text-[11px] font-black text-[#475467] uppercase tracking-[0.2em] px-1";
 
-  if (mode === 'verify') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fcfcfd] p-6 relative overflow-hidden">
-        <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] bg-blue-50 rounded-full blur-[140px] opacity-60"></div>
-        <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] bg-indigo-50 rounded-full blur-[140px] opacity-60"></div>
-
-        <div className="w-full max-w-[500px] bg-white border border-[#eaecf0] rounded-[48px] shadow-[0_32px_64px_-16px_rgba(16,24,40,0.12)] p-12 relative z-10 text-center animate-in fade-in zoom-in-95 duration-500">
-          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-[28px] flex items-center justify-center mx-auto mb-8 shadow-inner">
-            <i className="fas fa-envelope-circle-check text-3xl"></i>
-          </div>
-          <h1 className="text-3xl font-black text-[#101828] tracking-tighter mb-4">Check Your Inbox</h1>
-          <p className="text-[#475467] text-[15px] font-medium leading-relaxed mb-10">
-            We have sent you a verification email to <span className="font-black text-[#101828]">{verifyEmailAddress}</span>. Please verify it and log in.
-          </p>
-          <button
-            onClick={() => { setMode('signin'); resetMessages(); }}
-            className="w-full py-5 bg-[#101828] text-white rounded-[24px] font-black text-[12px] uppercase tracking-[0.25em] shadow-2xl hover:bg-[#2160fd] transition-all flex items-center justify-center gap-4 group"
-          >
-            Return to Login <i className="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fcfcfd] p-6 relative overflow-hidden">
