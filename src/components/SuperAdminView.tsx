@@ -155,6 +155,17 @@ const SuperAdminView: React.FC = () => {
     return { totalSearches, totalEnrichments, totalExports, uniqueUsers, totalActions: filtered.length };
   }, [activityLogs, metricPeriod, customFrom, customTo]);
 
+  // Per-user metrics
+  const getUserMetrics = (userId: string) => {
+    const userLogs = activityLogs.filter(l => l.user_id === userId);
+    return {
+      generated: userLogs.filter(l => l.action === 'lead_generated').reduce((s, l) => s + l.count, 0),
+      enriched: userLogs.filter(l => l.action === 'lead_enriched').reduce((s, l) => s + l.count, 0),
+      exported: userLogs.filter(l => l.action === 'lead_exported').reduce((s, l) => s + l.count, 0),
+      total: userLogs.reduce((s, l) => s + l.count, 0),
+    };
+  };
+
   const toggleSuspension = async (user: AdminUser) => {
     if (!window.confirm(`Are you sure you want to ${user.is_suspended ? 'unsuspend' : 'suspend'} ${user.email}?`)) return;
     try {
