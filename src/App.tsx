@@ -172,6 +172,7 @@ const App: React.FC = () => {
   const handleSearchLeads = async () => {
     setIsSearching(true);
     setSearchError(null);
+    setAnalysisError(null);
     setSelectedLead(null);
     setActiveAnalysis(null);
     setLeads([]);
