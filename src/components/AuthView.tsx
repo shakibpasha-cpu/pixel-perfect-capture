@@ -251,7 +251,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
             {isLoading ? (
               <i className="fas fa-spinner animate-spin"></i>
             ) : (
-              <>{mode === 'signin' ? 'Access Platform' : mode === 'signup' ? 'Initialize Account' : 'Send Reset Link'} <i className="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i></>
+              <>{mode === 'signin' ? 'Access Platform' : 'Send Reset Link'} <i className="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i></>
             )}
           </button>
         </form>
