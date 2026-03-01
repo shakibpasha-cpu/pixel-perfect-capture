@@ -381,9 +381,9 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                     <div className="flex flex-wrap gap-3">
                        {data.competitors && data.competitors.length > 0 ? (
                          data.competitors.map((comp, i) => (
-                           <span key={i} className="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-100 rounded-xl text-xs font-black uppercase tracking-wide">
-                             {comp}
-                           </span>
+                            <span key={i} className="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-100 rounded-xl text-xs font-black uppercase tracking-wide">
+                              {toStr(comp)}
+                            </span>
                          ))
                        ) : (
                          <p className="text-xs font-medium text-slate-400 italic">Competitive landscape analysis pending.</p>
