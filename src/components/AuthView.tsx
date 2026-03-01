@@ -256,18 +256,26 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
           </button>
         </form>
 
-        <div className="mt-8 pt-8 border-t border-[#f2f4f7] text-center">
-          <p className="text-[#667085] text-xs font-bold">
-            {mode === 'signin' ? "Don't have an account yet?" : mode === 'signup' ? "Already a member?" : "Remembered your password?"}
-            <button 
-              onClick={() => {
-                setMode(mode === 'signin' ? 'signup' : 'signin');
-                resetMessages();
-              }}
-              className="ml-2 text-[#2160fd] hover:text-[#101828] transition-colors underline decoration-blue-100 underline-offset-4"
-            >
-              {mode === 'signin' ? 'Create one for free' : 'Sign in here'}
-            </button>
+        {mode === 'forgot' && (
+          <div className="mt-8 pt-8 border-t border-[#f2f4f7] text-center">
+            <p className="text-[#667085] text-xs font-bold">
+              Remembered your password?
+              <button 
+                onClick={() => {
+                  setMode('signin');
+                  resetMessages();
+                }}
+                className="ml-2 text-[#2160fd] hover:text-[#101828] transition-colors underline decoration-blue-100 underline-offset-4"
+              >
+                Sign in here
+              </button>
+            </p>
+          </div>
+        )}
+
+        <div className="mt-6 text-center">
+          <p className="text-[10px] font-bold text-[#98a2b3] uppercase tracking-widest">
+            Accounts are created by administrators only
           </p>
         </div>
       </div>
