@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ShieldAlert, Users, Key, Ban, CheckCircle, Search, RefreshCw } from 'lucide-react';
+import { ShieldAlert, Users, Key, Ban, CheckCircle, Search, RefreshCw, UserPlus } from 'lucide-react';
 
 interface AdminUser {
   id: string;
@@ -18,6 +18,11 @@ const SuperAdminView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [globalKey, setGlobalKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newDisplayName, setNewDisplayName] = useState('');
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -113,6 +118,32 @@ const SuperAdminView: React.FC = () => {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newEmail || !newPassword) return alert("Email and password are required.");
+    setIsCreatingUser(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ email: newEmail, password: newPassword, display_name: newDisplayName }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to create user');
+      alert(`User ${newEmail} created successfully!`);
+      setNewEmail(''); setNewPassword(''); setNewDisplayName(''); setShowCreateUser(false);
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      alert(error.message || "Failed to create user.");
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
   const filteredUsers = users.filter(u => 
     u.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
     u.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -164,6 +195,65 @@ const SuperAdminView: React.FC = () => {
              </div>
           </div>
         </div>
+      </div>
+
+      {/* Create Account Section */}
+      <div className="bg-white border border-[#eaecf0] rounded-[48px] p-10 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-black text-[#101828] flex items-center gap-3">
+            <UserPlus size={20} className="text-emerald-500" />
+            Create New Account
+          </h3>
+          <button
+            onClick={() => setShowCreateUser(!showCreateUser)}
+            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+          >
+            {showCreateUser ? 'Cancel' : 'New User'}
+          </button>
+        </div>
+        {showCreateUser && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Display Name</label>
+              <input
+                type="text"
+                value={newDisplayName}
+                onChange={(e) => setNewDisplayName(e.target.value)}
+                placeholder="John Doe"
+                className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl focus:border-emerald-500 outline-none transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Email *</label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="user@example.com"
+                className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl focus:border-emerald-500 outline-none transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Password *</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Min 6 characters"
+                className="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl focus:border-emerald-500 outline-none transition-colors"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <button
+                onClick={handleCreateUser}
+                disabled={isCreatingUser}
+                className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50"
+              >
+                {isCreatingUser ? 'Creating...' : 'Create Account'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-white border border-[#eaecf0] rounded-[48px] p-10 shadow-sm">
