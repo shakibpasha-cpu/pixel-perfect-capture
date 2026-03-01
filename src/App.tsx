@@ -160,6 +160,15 @@ const App: React.FC = () => {
     return false;
   }, []);
 
+  const getRateLimitErrorMessage = useCallback((error: any) => {
+    const errorMessage = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
+    const isRateLimited = error?.status === 429 || errorMessage.includes('"code":429') || errorMessage.includes('RESOURCE_EXHAUSTED');
+
+    if (!isRateLimited) return null;
+
+    return "Full Discovery is temporarily rate-limited by the AI provider. Please wait 30–60 seconds and try again.";
+  }, []);
+
   const handleSearchLeads = async () => {
     setIsSearching(true);
     setSearchError(null);
