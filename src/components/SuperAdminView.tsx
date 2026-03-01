@@ -1,12 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../services/firebase';
-import { UserProfile } from '../types';
+import { supabase } from '@/integrations/supabase/client';
 import { ShieldAlert, Users, Key, Ban, CheckCircle, Search, RefreshCw } from 'lucide-react';
 
+interface AdminUser {
+  id: string;
+  email: string;
+  display_name: string | null;
+  created_at: string;
+  role: string;
+  is_suspended: boolean;
+}
+
 const SuperAdminView: React.FC = () => {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [globalKey, setGlobalKey] = useState('');
@@ -15,10 +22,29 @@ const SuperAdminView: React.FC = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const querySnapshot = await getDocs(collection(db, "users"));
-      const userList: UserProfile[] = [];
-      querySnapshot.forEach((doc) => {
-        userList.push(doc.data() as UserProfile);
+      // Fetch profiles and their roles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, display_name, created_at');
+
+      if (profilesError) throw profilesError;
+
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role, is_suspended');
+
+      if (rolesError) throw rolesError;
+
+      const userList: AdminUser[] = (profiles || []).map(p => {
+        const userRole = roles?.find(r => r.user_id === p.id);
+        return {
+          id: p.id,
+          email: p.email,
+          display_name: p.display_name,
+          created_at: p.created_at,
+          role: userRole?.role || 'user',
+          is_suspended: userRole?.is_suspended || false,
+        };
       });
       setUsers(userList);
     } catch (error) {
@@ -30,10 +56,15 @@ const SuperAdminView: React.FC = () => {
 
   const fetchGlobalKey = async () => {
     try {
-      const docRef = doc(db, "settings", "global");
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setGlobalKey(docSnap.data().apiKey || '');
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'global_api_key')
+        .single();
+
+      if (!error && data) {
+        const val = data.value as any;
+        setGlobalKey(val?.apiKey || '');
       }
     } catch (error) {
       console.error("Error fetching global key:", error);
@@ -45,16 +76,17 @@ const SuperAdminView: React.FC = () => {
     fetchGlobalKey();
   }, []);
 
-  const toggleSuspension = async (user: UserProfile) => {
-    if (!window.confirm(`Are you sure you want to ${user.isSuspended ? 'unsuspend' : 'suspend'} ${user.email}?`)) return;
+  const toggleSuspension = async (user: AdminUser) => {
+    if (!window.confirm(`Are you sure you want to ${user.is_suspended ? 'unsuspend' : 'suspend'} ${user.email}?`)) return;
 
     try {
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, {
-        isSuspended: !user.isSuspended
-      });
-      // Update local state
-      setUsers(prev => prev.map(u => u.uid === user.uid ? { ...u, isSuspended: !u.isSuspended } : u));
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ is_suspended: !user.is_suspended })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_suspended: !u.is_suspended } : u));
     } catch (error) {
       console.error("Error updating suspension:", error);
       alert("Failed to update user status.");
@@ -64,10 +96,14 @@ const SuperAdminView: React.FC = () => {
   const handleSaveKey = async () => {
     setIsSavingKey(true);
     try {
-      await setDoc(doc(db, "settings", "global"), {
-        apiKey: globalKey,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({
+          key: 'global_api_key',
+          value: { apiKey: globalKey, updatedAt: new Date().toISOString() } as any,
+        }, { onConflict: 'key' });
+
+      if (error) throw error;
       alert("Global API Key updated successfully.");
     } catch (error) {
       console.error("Error saving key:", error);
@@ -79,7 +115,7 @@ const SuperAdminView: React.FC = () => {
 
   const filteredUsers = users.filter(u => 
     u.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.displayName?.toLowerCase().includes(searchQuery.toLowerCase())
+    u.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -175,30 +211,30 @@ const SuperAdminView: React.FC = () => {
                 </tr>
               ) : (
                 filteredUsers.map(user => (
-                  <tr key={user.uid} className="group hover:bg-slate-50/50 transition-colors">
+                  <tr key={user.id} className="group hover:bg-slate-50/50 transition-colors">
                     <td className="py-4 px-6">
                       <div>
-                        <p className="text-sm font-bold text-[#101828]">{user.displayName || 'No Name'}</p>
+                        <p className="text-sm font-bold text-[#101828]">{user.display_name || 'No Name'}</p>
                         <p className="text-xs text-slate-500 font-medium">{user.email}</p>
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wide ${user.email === 'admin@companiesgenius.com' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
-                        {user.email === 'admin@companiesgenius.com' ? 'Super Admin' : 'User'}
+                      <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wide ${user.role === 'admin' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+                        {user.role === 'admin' ? 'Super Admin' : 'User'}
                       </span>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-slate-700">
-                          {user.registeredAt ? new Date(user.registeredAt).toLocaleDateString() : 'N/A'}
+                          {new Date(user.created_at).toLocaleDateString()}
                         </span>
                         <span className="text-[10px] font-medium text-slate-400">
-                          {user.registeredAt ? new Date(user.registeredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          {new Date(user.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      {user.isSuspended ? (
+                      {user.is_suspended ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest">
                           <Ban size={10} /> Suspended
                         </span>
@@ -209,16 +245,16 @@ const SuperAdminView: React.FC = () => {
                       )}
                     </td>
                     <td className="py-4 px-6 text-right">
-                      {user.email !== 'admin@companiesgenius.com' && (
+                      {user.role !== 'admin' && (
                         <button
                           onClick={() => toggleSuspension(user)}
                           className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                            user.isSuspended 
+                            user.is_suspended 
                             ? 'bg-emerald-600 text-white hover:bg-emerald-700' 
                             : 'bg-rose-50 text-rose-600 hover:bg-rose-100'
                           }`}
                         >
-                          {user.isSuspended ? 'Reactivate' : 'Suspend'}
+                          {user.is_suspended ? 'Reactivate' : 'Suspend'}
                         </button>
                       )}
                     </td>

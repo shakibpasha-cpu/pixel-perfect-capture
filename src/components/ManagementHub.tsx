@@ -1,13 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  orderBy
-} from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { Note } from '../types';
 import Modal from './Modal';
 
@@ -35,11 +28,22 @@ const ManagementHub: React.FC<Props> = ({ userId }) => {
     setPermissionError(false);
     
     try {
-      const snap = await getDocs(query(collection(db, `users/${userId}/notes`), orderBy('createdAt', 'desc')));
-      setNotes(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note)));
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setNotes((data || []).map(n => ({
+        id: n.id,
+        title: n.title,
+        content: n.content || undefined,
+        createdAt: n.created_at,
+      })));
     } catch (e: any) {
       console.error("Management Hub error:", e);
-      if (e.code === 'permission-denied') {
+      if (e.message?.includes('permission') || e.code === '42501') {
         setPermissionError(true);
       }
     } finally {
@@ -55,11 +59,12 @@ const ManagementHub: React.FC<Props> = ({ userId }) => {
     if (!formData.noteTitle) return;
     setIsLoading(true);
     try {
-      await addDoc(collection(db, `users/${userId}/notes`), {
+      const { error } = await supabase.from('notes').insert({
         title: formData.noteTitle,
         content: formData.noteContent,
-        createdAt: new Date().toISOString()
+        user_id: userId,
       });
+      if (error) throw error;
       await fetchData();
       setFormData({ noteTitle: '', noteContent: '' });
       setIsNoteModalOpen(false);
@@ -78,7 +83,7 @@ const ManagementHub: React.FC<Props> = ({ userId }) => {
         </div>
         <h2 className="text-3xl font-black text-[#101828] tracking-tighter mb-4 uppercase">Database Locked</h2>
         <p className="text-[#475467] text-[15px] font-medium mb-10 max-w-lg mx-auto leading-relaxed">
-          Please update your <strong>Firestore Security Rules</strong> in the Firebase Console to allow access.
+          Please check your database permissions and try again.
         </p>
         <button 
           onClick={() => fetchData()}

@@ -1,8 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { Lead, AnalysisResult, GroundingChunk, EnrichmentSuggestion, StrategySuggestions, AIQualificationCriteria, VerificationResult, ComparisonResult } from "../types";
-import { db } from "./firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { supabase } from "@/integrations/supabase/client";
 
 const getPosition = (): Promise<GeolocationPosition> => {
   return new Promise((resolve, reject) => {
@@ -52,16 +51,23 @@ export class GeminiService {
       return envKey;
     }
 
-    // Fallback to Firestore for Super Admin Key
+    // Fallback to app_settings table for Super Admin Key
     try {
-      const docRef = doc(db, "settings", "global");
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists() && docSnap.data().apiKey) {
-        this.cachedKey = docSnap.data().apiKey;
-        return this.cachedKey as string;
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'global_api_key')
+        .single();
+
+      if (!error && data) {
+        const val = data.value as any;
+        if (val?.apiKey) {
+          this.cachedKey = val.apiKey;
+          return this.cachedKey as string;
+        }
       }
     } catch (e) {
-      console.warn("Could not fetch API key from Firestore:", e);
+      console.warn("Could not fetch API key from database:", e);
     }
     
     return "";

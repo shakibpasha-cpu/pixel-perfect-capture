@@ -1,8 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './services/firebase';
+import { supabase } from '@/integrations/supabase/client';
+import type { User } from '@supabase/supabase-js';
 import AuthView from './components/AuthView';
 import Header from './components/Header';
 import SearchSection, { SearchFilters } from './components/SearchSection';
@@ -84,58 +83,50 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser && currentUser.emailVerified) {
-        // Check for suspension in Firestore
-        try {
-          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-          if (userDoc.exists() && userDoc.data().isSuspended) {
-            setIsSuspended(true);
-            await signOut(auth);
-            setUser(null);
-          } else {
-            setIsSuspended(false);
-            setUser(currentUser);
-          }
-        } catch (e) {
-          console.error("Error checking user status:", e);
-          // If network fails during check, allow user but maybe log it
-          setUser(currentUser);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        // Check suspension using user_roles table
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('is_suspended')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (roleData?.is_suspended) {
+          setIsSuspended(true);
+          await supabase.auth.signOut();
+          setUser(null);
+        } else {
+          setIsSuspended(false);
+          setUser(session.user);
         }
       } else {
-        // Only clear user if we are not already in a manual demo session (which has specific uid)
-        setUser((prev) => prev?.uid === 'demo-user-123' ? prev : null);
+        // Only clear user if we are not already in a manual demo session
+        setUser((prev) => prev?.id === 'demo-user-123' ? prev : null);
       }
       setIsAuthLoading(false);
     });
-    return () => unsubscribe();
+
+    // Then get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+      }
+      setIsAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleDemoLogin = () => {
     const demoUser = {
-      uid: 'demo-user-123',
+      id: 'demo-user-123',
       email: 'demo@companiesgenius.com',
-      displayName: 'Demo Executive',
-      emailVerified: true,
-      isAnonymous: false,
-      metadata: {},
-      providerData: [],
-      refreshToken: '',
-      tenantId: null,
-      delete: async () => {},
-      getIdToken: async () => 'demo-token',
-      getIdTokenResult: async () => ({
-        token: 'demo-token',
-        signInProvider: 'custom',
-        claims: {},
-        authTime: Date.now().toString(),
-        issuedAtTime: Date.now().toString(),
-        expirationTime: (Date.now() + 3600000).toString(),
-      }),
-      reload: async () => {},
-      toJSON: () => ({}),
-      phoneNumber: null,
-      photoURL: null,
+      user_metadata: { display_name: 'Demo Executive' },
+      app_metadata: {},
+      aud: 'authenticated',
+      created_at: new Date().toISOString(),
     } as unknown as User;
     
     setUser(demoUser);
@@ -272,7 +263,6 @@ const App: React.FC = () => {
   const handlePushToQualification = (lead: Lead) => {
     setSelectedLead(null);
     setCurrentView('ai-qualification');
-    // In AIQualificationView, we can optionally filter for this lead if needed
   };
 
   const handleImportLeads = (newLeads: Lead[]) => {
@@ -382,7 +372,7 @@ const App: React.FC = () => {
             )}
 
             {currentView === 'hub' && (
-              <ManagementHub userId={user.uid} />
+              <ManagementHub userId={user.id} />
             )}
 
             {currentView === 'outreach' && (
