@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ShieldAlert, Users, Key, Ban, CheckCircle, Search, RefreshCw, UserPlus, BarChart3, Calendar, TrendingUp, Activity } from 'lucide-react';
+import { ShieldAlert, Users, Key, Ban, CheckCircle, Search, RefreshCw, UserPlus, BarChart3, Calendar, TrendingUp, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
