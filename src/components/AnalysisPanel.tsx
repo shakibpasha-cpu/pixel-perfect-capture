@@ -362,12 +362,12 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                         {data.futureProjects.map((proj, i) => (
                           <li key={i} className="flex items-start gap-3">
                              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></span>
-                             <span className="text-sm font-bold text-[#101828] leading-snug">{proj}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-xs font-medium text-slate-400 italic">Future roadmap not publicly disclosed.</p>
+                             <span className="text-sm font-bold text-[#101828] leading-snug">{toStr(proj)}</span>
+                           </li>
+                         ))}
+                       </ul>
+                     ) : (
+                       <p className="text-xs font-medium text-slate-400 italic">Future roadmap not publicly disclosed.</p>
                     )}
                  </div>
               </section>
