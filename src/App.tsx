@@ -226,10 +226,14 @@ const App: React.FC = () => {
   };
 
   const handleRunAnalysis = async (type: AnalysisType, targetLead?: Lead) => {
+    if (isAnalysisRunningRef.current) return;
+
     const leadToAnalyze = targetLead || selectedLead;
     if (!leadToAnalyze) return;
-    
+
+    isAnalysisRunningRef.current = true;
     setIsAnalyzing(true);
+    setAnalysisError(null);
 
     try {
       if (type === AnalysisType.QUALIFY) {
@@ -245,7 +249,7 @@ const App: React.FC = () => {
       } else if (type === AnalysisType.SEARCH) {
         handleStatusChange(leadToAnalyze.id, 'enriching');
         const result = await gemini.enrichLead(leadToAnalyze);
-        
+
         if (leadToAnalyze.id === selectedLead?.id) {
           setActiveAnalysis(result);
         }
@@ -261,22 +265,27 @@ const App: React.FC = () => {
         } else {
           finalLead = { ...leadToAnalyze, status: 'analyzed', leadStatus: 'analyzed' };
         }
-        
+
         handleUpdateLead(finalLead);
 
         // AUTO-GENERATE SUMMARY AFTER ENRICHMENT
         if (finalLead.status === 'analyzed' && !finalLead.quickSummary) {
           handleGenerateQuickSummary(finalLead);
         }
-
       }
     } catch (error) {
+      const rateLimitMessage = getRateLimitErrorMessage(error);
+      if (rateLimitMessage) {
+        setAnalysisError(rateLimitMessage);
+      }
+
       const handled = await handleApiKeyError(error);
       if (!handled) {
         console.error("Analysis failed:", error);
         if (type === AnalysisType.SEARCH) handleStatusChange(leadToAnalyze.id, 'new');
       }
     } finally {
+      isAnalysisRunningRef.current = false;
       setIsAnalyzing(false);
     }
   };
