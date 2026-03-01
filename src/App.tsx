@@ -83,61 +83,55 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    let authResolved = false;
-    
-    const resolveAuth = () => {
-      authResolved = true;
-      setIsAuthLoading(false);
-    };
-
-    // Safety timeout — if auth doesn't resolve in 5 seconds, show login
-    const timeout = setTimeout(() => {
-      if (!authResolved) {
-        console.warn("[Auth] Timeout reached, showing login screen.");
-        resolveAuth();
-      }
-    }, 5000);
-
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        // Check suspension using user_roles table
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('is_suspended')
-          .eq('user_id', session.user.id)
-          .single();
-
-        if (roleData?.is_suspended) {
-          setIsSuspended(true);
-          await supabase.auth.signOut();
-          setUser(null);
-        } else {
-          setIsSuspended(false);
-          setUser(session.user);
-        }
-      } else {
-        // Only clear user if we are not already in a manual demo session
-        setUser((prev) => prev?.id === 'demo-user-123' ? prev : null);
-      }
-      resolveAuth();
-    });
-
-    // Then get initial session
+    // Restore session from storage first
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
+        // Check suspension in background (fire-and-forget)
+        checkSuspension(session.user);
       }
-      resolveAuth();
+      setIsAuthLoading(false);
     }).catch(() => {
-      resolveAuth();
+      setIsAuthLoading(false);
     });
 
+    // Listen for subsequent auth changes (sign in/out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) {
+          setUser(session.user);
+          checkSuspension(session.user);
+        } else {
+          setUser((prev) => prev?.id === 'demo-user-123' ? prev : null);
+        }
+        setIsAuthLoading(false);
+      }
+    );
+
     return () => {
-      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, []);
+
+  const checkSuspension = async (authUser: User) => {
+    try {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('is_suspended')
+        .eq('user_id', authUser.id)
+        .single();
+
+      if (roleData?.is_suspended) {
+        setIsSuspended(true);
+        await supabase.auth.signOut();
+        setUser(null);
+      } else {
+        setIsSuspended(false);
+      }
+    } catch (e) {
+      console.error("[Auth] Suspension check failed:", e);
+    }
+  };
 
   const handleDemoLogin = () => {
     const demoUser = {
