@@ -13,17 +13,10 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
-  // New Sign Up Fields
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [country, setCountry] = useState('');
-  const [city, setCity] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [verifyEmailAddress, setVerifyEmailAddress] = useState('');
 
   const resetMessages = () => {
     setError(null);
