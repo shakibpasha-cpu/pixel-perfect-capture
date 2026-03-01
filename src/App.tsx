@@ -41,10 +41,12 @@ const App: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeAnalysis, setActiveAnalysis] = useState<AnalysisResult | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [validationVerdicts, setValidationVerdicts] = useState<Record<string, string>>({});
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchCount, setSearchCount] = useState(0);
   const [isSuspended, setIsSuspended] = useState(false);
+  const isAnalysisRunningRef = useRef(false);
   
   // Import Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
