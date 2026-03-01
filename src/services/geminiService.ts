@@ -79,6 +79,46 @@ export class GeminiService {
     return new GoogleGenAI({ apiKey });
   }
 
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private isRateLimitError(error: any): boolean {
+    const msg = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
+    return error?.status === 429 || msg.includes('"code":429') || msg.includes('RESOURCE_EXHAUSTED');
+  }
+
+  private isRetryableError(error: any): boolean {
+    if (this.isRateLimitError(error)) return true;
+    const status = error?.status;
+    return typeof status === 'number' && status >= 500;
+  }
+
+  private getRetryDelayMs(attempt: number): number {
+    const baseDelay = 1500;
+    const maxDelay = 12000;
+    const jitter = Math.floor(Math.random() * 700);
+    return Math.min(maxDelay, baseDelay * (2 ** attempt) + jitter);
+  }
+
+  private async generateWithRetry(ai: GoogleGenAI, payload: any, maxRetries: number = 2) {
+    let lastError: any;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await ai.models.generateContent(payload);
+      } catch (error) {
+        lastError = error;
+        if (attempt >= maxRetries || !this.isRetryableError(error)) break;
+        const waitMs = this.getRetryDelayMs(attempt);
+        console.warn(`[GeminiService] Retry ${attempt + 1}/${maxRetries} after ${waitMs}ms due to rate/temporary error.`);
+        await this.sleep(waitMs);
+      }
+    }
+
+    throw lastError;
+  }
+
   async suggestQualificationCriteria(context: string): Promise<AIQualificationCriteria> {
     const ai = await this.getAI();
     const response = await ai.models.generateContent({
@@ -559,7 +599,7 @@ export class GeminiService {
 
   async enrichLead(lead: Lead): Promise<AnalysisResult> {
     const ai = await this.getAI();
-    const response = await ai.models.generateContent({
+    const response = await this.generateWithRetry(ai, {
       model: "gemini-3-flash-preview",
       contents: `Deep search enrichment for: ${lead.name} in ${lead.location}.
       
@@ -665,7 +705,7 @@ export class GeminiService {
           required: ["summary", "enrichedData", "suggestions"]
         }
       }
-    });
+    }, 2);
     
     try {
       const parsed = JSON.parse(this.cleanJsonString(response.text || '{}'));

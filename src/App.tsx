@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import AuthView from './components/AuthView';
@@ -41,10 +41,12 @@ const App: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeAnalysis, setActiveAnalysis] = useState<AnalysisResult | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [validationVerdicts, setValidationVerdicts] = useState<Record<string, string>>({});
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchCount, setSearchCount] = useState(0);
   const [isSuspended, setIsSuspended] = useState(false);
+  const isAnalysisRunningRef = useRef(false);
   
   // Import Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -158,9 +160,19 @@ const App: React.FC = () => {
     return false;
   }, []);
 
+  const getRateLimitErrorMessage = useCallback((error: any) => {
+    const errorMessage = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
+    const isRateLimited = error?.status === 429 || errorMessage.includes('"code":429') || errorMessage.includes('RESOURCE_EXHAUSTED');
+
+    if (!isRateLimited) return null;
+
+    return "Full Discovery is temporarily rate-limited by the AI provider. Please wait 30–60 seconds and try again.";
+  }, []);
+
   const handleSearchLeads = async () => {
     setIsSearching(true);
     setSearchError(null);
+    setAnalysisError(null);
     setSelectedLead(null);
     setActiveAnalysis(null);
     setLeads([]);
@@ -214,10 +226,14 @@ const App: React.FC = () => {
   };
 
   const handleRunAnalysis = async (type: AnalysisType, targetLead?: Lead) => {
+    if (isAnalysisRunningRef.current) return;
+
     const leadToAnalyze = targetLead || selectedLead;
     if (!leadToAnalyze) return;
-    
+
+    isAnalysisRunningRef.current = true;
     setIsAnalyzing(true);
+    setAnalysisError(null);
 
     try {
       if (type === AnalysisType.QUALIFY) {
@@ -233,7 +249,7 @@ const App: React.FC = () => {
       } else if (type === AnalysisType.SEARCH) {
         handleStatusChange(leadToAnalyze.id, 'enriching');
         const result = await gemini.enrichLead(leadToAnalyze);
-        
+
         if (leadToAnalyze.id === selectedLead?.id) {
           setActiveAnalysis(result);
         }
@@ -249,28 +265,34 @@ const App: React.FC = () => {
         } else {
           finalLead = { ...leadToAnalyze, status: 'analyzed', leadStatus: 'analyzed' };
         }
-        
+
         handleUpdateLead(finalLead);
 
         // AUTO-GENERATE SUMMARY AFTER ENRICHMENT
         if (finalLead.status === 'analyzed' && !finalLead.quickSummary) {
           handleGenerateQuickSummary(finalLead);
         }
-
       }
     } catch (error) {
+      const rateLimitMessage = getRateLimitErrorMessage(error);
+      if (rateLimitMessage) {
+        setAnalysisError(rateLimitMessage);
+      }
+
       const handled = await handleApiKeyError(error);
       if (!handled) {
         console.error("Analysis failed:", error);
         if (type === AnalysisType.SEARCH) handleStatusChange(leadToAnalyze.id, 'new');
       }
     } finally {
+      isAnalysisRunningRef.current = false;
       setIsAnalyzing(false);
     }
   };
 
   const handleSelectLead = (lead: Lead) => {
     setSelectedLead(lead);
+    setAnalysisError(null);
     setActiveAnalysis(null);
   };
 
@@ -449,14 +471,21 @@ const App: React.FC = () => {
 
       {selectedLead && (
         <>
-          <div className="fixed inset-0 bg-[#101828]/40 backdrop-blur-md z-[140]" onClick={() => setSelectedLead(null)}></div>
+          <div className="fixed inset-0 bg-[#101828]/40 backdrop-blur-md z-[140]" onClick={() => {
+            setSelectedLead(null);
+            setAnalysisError(null);
+          }}></div>
           <AnalysisPanel 
             lead={selectedLead}
             analysis={activeAnalysis}
+            analysisError={analysisError}
             isLoading={isAnalyzing}
             onRunAnalysis={(type) => handleRunAnalysis(type)}
             onUpdateLead={handleUpdateLead}
-            onClose={() => setSelectedLead(null)}
+            onClose={() => {
+              setSelectedLead(null);
+              setAnalysisError(null);
+            }}
             onPushToQualification={handlePushToQualification}
           />
         </>
