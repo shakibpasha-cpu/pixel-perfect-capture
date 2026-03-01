@@ -292,6 +292,7 @@ const App: React.FC = () => {
 
   const handleSelectLead = (lead: Lead) => {
     setSelectedLead(lead);
+    setAnalysisError(null);
     setActiveAnalysis(null);
   };
 
