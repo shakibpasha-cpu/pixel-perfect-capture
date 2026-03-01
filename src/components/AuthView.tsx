@@ -44,15 +44,6 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
 
         if (signInError) throw signInError;
 
-        // Check if email is confirmed
-        if (data.user && !data.user.email_confirmed_at) {
-          setVerifyEmailAddress(data.user.email || email);
-          await supabase.auth.signOut();
-          setMode('verify');
-          setIsLoading(false);
-          return;
-        }
-
         // Check suspension
         const { data: roleData } = await supabase
           .from('user_roles')
