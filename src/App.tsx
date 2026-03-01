@@ -18,6 +18,7 @@ import ProfileView from './components/ProfileView';
 import ImportModal from './components/ImportModal';
 import { Lead, AnalysisResult, AnalysisType } from './types';
 import { gemini } from './services/geminiService';
+import { toast } from 'sonner';
 
 declare global {
   interface AIStudio {
@@ -248,7 +249,12 @@ const App: React.FC = () => {
         handleUpdateLead(updatedLead);
       } else if (type === AnalysisType.SEARCH) {
         handleStatusChange(leadToAnalyze.id, 'enriching');
-        const result = await gemini.enrichLead(leadToAnalyze);
+        const result = await gemini.enrichLead(leadToAnalyze, (attempt, waitSec) => {
+          toast.info(`Rate-limited. Auto-retrying in ${waitSec}s (attempt ${attempt}/5)...`, {
+            duration: waitSec * 1000,
+            id: 'enrichment-retry',
+          });
+        });
 
         if (leadToAnalyze.id === selectedLead?.id) {
           setActiveAnalysis(result);
