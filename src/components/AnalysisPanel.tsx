@@ -5,6 +5,7 @@ import { Lead, AnalysisResult, AnalysisType, EnrichmentSuggestion } from '../typ
 interface AnalysisPanelProps {
   lead: Lead;
   analysis: AnalysisResult | null;
+  analysisError?: string | null;
   isLoading: boolean;
   onRunAnalysis: (type: AnalysisType) => void;
   onUpdateLead: (lead: Lead) => void;
@@ -13,7 +14,7 @@ interface AnalysisPanelProps {
 }
 
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ 
-  lead, analysis, isLoading, onRunAnalysis, onUpdateLead, onClose, onPushToQualification
+  lead, analysis, analysisError, isLoading, onRunAnalysis, onUpdateLead, onClose, onPushToQualification
 }) => {
   const [activeTab, setActiveTab] = useState<'intelligence' | 'company_intel' | 'details'>('intelligence');
   const [copiedId, setCopiedId] = useState<string | null>(null);
