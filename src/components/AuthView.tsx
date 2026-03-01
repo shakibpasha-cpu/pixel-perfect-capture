@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-type AuthMode = 'signin' | 'signup' | 'forgot' | 'verify';
+type AuthMode = 'signin' | 'forgot';
 
 interface AuthViewProps {
   onDemoLogin?: () => void;
@@ -13,17 +13,10 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
-  // New Sign Up Fields
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [country, setCountry] = useState('');
-  const [city, setCity] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [verifyEmailAddress, setVerifyEmailAddress] = useState('');
 
   const resetMessages = () => {
     setError(null);
@@ -43,57 +36,13 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
     setIsLoading(true);
 
     try {
-      if (mode === 'signup') {
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              display_name: name,
-              phone,
-              country,
-              city,
-            },
-            emailRedirectTo: window.location.origin,
-          }
-        });
-
-        if (signUpError) throw signUpError;
-
-        if (data.user) {
-          // Update profile with additional data
-          try {
-            await supabase.from('profiles').update({
-              phone,
-              country,
-              city,
-            }).eq('id', data.user.id);
-          } catch (e) {
-            console.error("Error updating profile:", e);
-          }
-
-          // Sign out immediately
-          await supabase.auth.signOut();
-          
-          setVerifyEmailAddress(email);
-          setMode('verify');
-        }
-      } else if (mode === 'signin') {
+      if (mode === 'signin') {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (signInError) throw signInError;
-
-        // Check if email is confirmed
-        if (data.user && !data.user.email_confirmed_at) {
-          setVerifyEmailAddress(data.user.email || email);
-          await supabase.auth.signOut();
-          setMode('verify');
-          setIsLoading(false);
-          return;
-        }
 
         // Check suspension
         const { data: roleData } = await supabase
@@ -121,9 +70,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
         handleNetworkError();
         return;
       }
-      if (mode === 'signup' && err.message?.includes('already registered')) {
-        setError("User already exists. Please sign in");
-      } else if (mode === 'signin' && err.message?.includes('Invalid login')) {
+      if (mode === 'signin' && err.message?.includes('Invalid login')) {
         setError("Email or password is incorrect");
       } else {
         setError(err.message || "An authentication error occurred");
@@ -180,30 +127,6 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
   const inputStyles = "w-full pl-12 pr-12 py-4 bg-[#f9fafb] border border-[#eaecf0] rounded-2xl text-[14px] font-bold text-[#101828] focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-[#2160fd] outline-none transition-all";
   const labelStyles = "text-[11px] font-black text-[#475467] uppercase tracking-[0.2em] px-1";
 
-  if (mode === 'verify') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fcfcfd] p-6 relative overflow-hidden">
-        <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] bg-blue-50 rounded-full blur-[140px] opacity-60"></div>
-        <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] bg-indigo-50 rounded-full blur-[140px] opacity-60"></div>
-
-        <div className="w-full max-w-[500px] bg-white border border-[#eaecf0] rounded-[48px] shadow-[0_32px_64px_-16px_rgba(16,24,40,0.12)] p-12 relative z-10 text-center animate-in fade-in zoom-in-95 duration-500">
-          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-[28px] flex items-center justify-center mx-auto mb-8 shadow-inner">
-            <i className="fas fa-envelope-circle-check text-3xl"></i>
-          </div>
-          <h1 className="text-3xl font-black text-[#101828] tracking-tighter mb-4">Check Your Inbox</h1>
-          <p className="text-[#475467] text-[15px] font-medium leading-relaxed mb-10">
-            We have sent you a verification email to <span className="font-black text-[#101828]">{verifyEmailAddress}</span>. Please verify it and log in.
-          </p>
-          <button
-            onClick={() => { setMode('signin'); resetMessages(); }}
-            className="w-full py-5 bg-[#101828] text-white rounded-[24px] font-black text-[12px] uppercase tracking-[0.25em] shadow-2xl hover:bg-[#2160fd] transition-all flex items-center justify-center gap-4 group"
-          >
-            Return to Login <i className="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fcfcfd] p-6 relative overflow-hidden">
@@ -217,10 +140,10 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
             <i className="fas fa-rocket-launch text-2xl"></i>
           </div>
           <h1 className="text-3xl font-black text-[#101828] tracking-tighter mb-2">
-            {mode === 'signin' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Recover Access'}
+            {mode === 'signin' ? 'Welcome Back' : 'Recover Access'}
           </h1>
           <p className="text-[#667085] text-sm font-bold opacity-60 text-center">
-            {mode === 'signin' ? 'Sign in to access your intelligence dashboard' : mode === 'signup' ? 'Join companiesGenius Pro to start generating leads' : 'Enter your email to receive a secure reset link'}
+            {mode === 'signin' ? 'Sign in to access your intelligence dashboard' : 'Enter your email to receive a secure reset link'}
           </p>
         </div>
 
@@ -255,70 +178,6 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500 max-h-[60vh] overflow-y-auto px-1 no-scrollbar">
-          {mode === 'signup' && (
-            <>
-              <div className="space-y-2">
-                <label className={labelStyles}>Full Name</label>
-                <div className="relative group">
-                  <i className="fas fa-user absolute left-5 top-1/2 -translate-y-1/2 text-[#98a2b3] group-focus-within:text-[#2160fd] transition-colors"></i>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="John Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className={inputStyles}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className={labelStyles}>Phone Number</label>
-                <div className="relative group">
-                  <i className="fas fa-phone absolute left-5 top-1/2 -translate-y-1/2 text-[#98a2b3] group-focus-within:text-[#2160fd] transition-colors"></i>
-                  <input 
-                    type="tel" 
-                    required
-                    placeholder="+1 (555) 000-0000"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className={inputStyles}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className={labelStyles}>Country</label>
-                  <div className="relative group">
-                    <i className="fas fa-globe absolute left-5 top-1/2 -translate-y-1/2 text-[#98a2b3] group-focus-within:text-[#2160fd] transition-colors"></i>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="USA"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      className={inputStyles}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">City</label>
-                  <div className="relative group">
-                    <i className="fas fa-city absolute left-5 top-1/2 -translate-y-1/2 text-[#98a2b3] group-focus-within:text-[#2160fd] transition-colors"></i>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="New York"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className={inputStyles}
-                    />
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
 
           <div className="space-y-2">
             <label className={labelStyles}>Executive Email</label>
@@ -392,23 +251,31 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
             {isLoading ? (
               <i className="fas fa-spinner animate-spin"></i>
             ) : (
-              <>{mode === 'signin' ? 'Access Platform' : mode === 'signup' ? 'Initialize Account' : 'Send Reset Link'} <i className="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i></>
+              <>{mode === 'signin' ? 'Access Platform' : 'Send Reset Link'} <i className="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i></>
             )}
           </button>
         </form>
 
-        <div className="mt-8 pt-8 border-t border-[#f2f4f7] text-center">
-          <p className="text-[#667085] text-xs font-bold">
-            {mode === 'signin' ? "Don't have an account yet?" : mode === 'signup' ? "Already a member?" : "Remembered your password?"}
-            <button 
-              onClick={() => {
-                setMode(mode === 'signin' ? 'signup' : 'signin');
-                resetMessages();
-              }}
-              className="ml-2 text-[#2160fd] hover:text-[#101828] transition-colors underline decoration-blue-100 underline-offset-4"
-            >
-              {mode === 'signin' ? 'Create one for free' : 'Sign in here'}
-            </button>
+        {mode === 'forgot' && (
+          <div className="mt-8 pt-8 border-t border-[#f2f4f7] text-center">
+            <p className="text-[#667085] text-xs font-bold">
+              Remembered your password?
+              <button 
+                onClick={() => {
+                  setMode('signin');
+                  resetMessages();
+                }}
+                className="ml-2 text-[#2160fd] hover:text-[#101828] transition-colors underline decoration-blue-100 underline-offset-4"
+              >
+                Sign in here
+              </button>
+            </p>
+          </div>
+        )}
+
+        <div className="mt-6 text-center">
+          <p className="text-[10px] font-bold text-[#98a2b3] uppercase tracking-widest">
+            Accounts are created by administrators only
           </p>
         </div>
       </div>
