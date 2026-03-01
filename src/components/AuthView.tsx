@@ -140,7 +140,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
             <i className="fas fa-rocket-launch text-2xl"></i>
           </div>
           <h1 className="text-3xl font-black text-[#101828] tracking-tighter mb-2">
-            {mode === 'signin' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Recover Access'}
+            {mode === 'signin' ? 'Welcome Back' : 'Recover Access'}
           </h1>
           <p className="text-[#667085] text-sm font-bold opacity-60 text-center">
             {mode === 'signin' ? 'Sign in to access your intelligence dashboard' : mode === 'signup' ? 'Join companiesGenius Pro to start generating leads' : 'Enter your email to receive a secure reset link'}
