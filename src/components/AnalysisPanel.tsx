@@ -344,7 +344,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                         {data.runningProjects.map((proj, i) => (
                           <li key={i} className="flex items-start gap-3">
                              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
-                             <span className="text-sm font-bold text-[#101828] leading-snug">{proj}</span>
+                             <span className="text-sm font-bold text-[#101828] leading-snug">{toStr(proj)}</span>
                           </li>
                         ))}
                       </ul>
