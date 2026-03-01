@@ -35,6 +35,21 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
 
   const data = analysis?.enrichedData || lead;
 
+  // Safely convert any value to a displayable string
+  const toStr = (val: unknown): string => {
+    if (val == null) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+    if (typeof val === 'object') {
+      const obj = val as Record<string, unknown>;
+      // Common patterns from AI: {name, description}, {category, technologies}
+      if ('name' in obj) return String(obj.name);
+      if ('title' in obj) return String(obj.title);
+      return Object.values(obj).filter(v => typeof v === 'string').join(' — ') || JSON.stringify(val);
+    }
+    return String(val);
+  };
+
   function getInitials(name: string) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   }
