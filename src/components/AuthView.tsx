@@ -43,42 +43,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
     setIsLoading(true);
 
     try {
-      if (mode === 'signup') {
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              display_name: name,
-              phone,
-              country,
-              city,
-            },
-            emailRedirectTo: window.location.origin,
-          }
-        });
-
-        if (signUpError) throw signUpError;
-
-        if (data.user) {
-          // Update profile with additional data
-          try {
-            await supabase.from('profiles').update({
-              phone,
-              country,
-              city,
-            }).eq('id', data.user.id);
-          } catch (e) {
-            console.error("Error updating profile:", e);
-          }
-
-          // Sign out immediately
-          await supabase.auth.signOut();
-          
-          setVerifyEmailAddress(email);
-          setMode('verify');
-        }
-      } else if (mode === 'signin') {
+      if (mode === 'signin') {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
