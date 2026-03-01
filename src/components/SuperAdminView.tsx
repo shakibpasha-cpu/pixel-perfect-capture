@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ShieldAlert, Users, Key, Ban, CheckCircle, Search, RefreshCw } from 'lucide-react';
+import { ShieldAlert, Users, Key, Ban, CheckCircle, Search, RefreshCw, UserPlus } from 'lucide-react';
 
 interface AdminUser {
   id: string;
