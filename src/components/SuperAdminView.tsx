@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ShieldAlert, Users, Key, Ban, CheckCircle, Search, RefreshCw, UserPlus, BarChart3, Calendar, TrendingUp, Activity } from 'lucide-react';
+import { ShieldAlert, Users, Key, Ban, CheckCircle, Search, RefreshCw, UserPlus, BarChart3, Calendar, TrendingUp, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
@@ -32,6 +32,7 @@ const SuperAdminView: React.FC = () => {
   const [globalKey, setGlobalKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
@@ -153,6 +154,17 @@ const SuperAdminView: React.FC = () => {
 
     return { totalSearches, totalEnrichments, totalExports, uniqueUsers, totalActions: filtered.length };
   }, [activityLogs, metricPeriod, customFrom, customTo]);
+
+  // Per-user metrics
+  const getUserMetrics = (userId: string) => {
+    const userLogs = activityLogs.filter(l => l.user_id === userId);
+    return {
+      generated: userLogs.filter(l => l.action === 'lead_generated').reduce((s, l) => s + l.count, 0),
+      enriched: userLogs.filter(l => l.action === 'lead_enriched').reduce((s, l) => s + l.count, 0),
+      exported: userLogs.filter(l => l.action === 'lead_exported').reduce((s, l) => s + l.count, 0),
+      total: userLogs.reduce((s, l) => s + l.count, 0),
+    };
+  };
 
   const toggleSuspension = async (user: AdminUser) => {
     if (!window.confirm(`Are you sure you want to ${user.is_suspended ? 'unsuspend' : 'suspend'} ${user.email}?`)) return;
@@ -459,48 +471,86 @@ const SuperAdminView: React.FC = () => {
               {filteredUsers.length === 0 ? (
                 <tr><td colSpan={5} className="py-8 text-center text-sm text-slate-400 font-medium">No users found matching query.</td></tr>
               ) : (
-                filteredUsers.map(user => (
-                  <tr key={user.id} className="group hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-6">
-                      <div>
-                        <p className="text-sm font-bold text-[#101828]">{user.display_name || 'No Name'}</p>
-                        <p className="text-xs text-slate-500 font-medium">{user.email}</p>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wide ${user.role === 'admin' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
-                        {user.role === 'admin' ? 'Super Admin' : 'User'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-700">{new Date(user.created_at).toLocaleDateString()}</span>
-                        <span className="text-[10px] font-medium text-slate-400">{new Date(user.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      {user.is_suspended ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-                          <Ban size={10} /> Suspended
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-                          <CheckCircle size={10} /> Active
-                        </span>
+                filteredUsers.map(user => {
+                  const isExpanded = expandedUserId === user.id;
+                  const um = isExpanded ? getUserMetrics(user.id) : null;
+                  return (
+                    <React.Fragment key={user.id}>
+                      <tr
+                        className="group hover:bg-slate-50/50 transition-colors cursor-pointer"
+                        onClick={() => setExpandedUserId(isExpanded ? null : user.id)}
+                      >
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0">
+                              {isExpanded ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-[#101828]">{user.display_name || 'No Name'}</p>
+                              <p className="text-xs text-slate-500 font-medium">{user.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wide ${user.role === 'admin' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+                            {user.role === 'admin' ? 'Super Admin' : 'User'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-slate-700">{new Date(user.created_at).toLocaleDateString()}</span>
+                            <span className="text-[10px] font-medium text-slate-400">{new Date(user.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          {user.is_suspended ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+                              <Ban size={10} /> Suspended
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+                              <CheckCircle size={10} /> Active
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          {user.role !== 'admin' && (
+                            <button onClick={(e) => { e.stopPropagation(); toggleSuspension(user); }}
+                              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                user.is_suspended ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-rose-50 text-rose-600 hover:bg-rose-100'
+                              }`}>
+                              {user.is_suspended ? 'Reactivate' : 'Suspend'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                      {isExpanded && um && (
+                        <tr className="bg-slate-50/80">
+                          <td colSpan={5} className="px-6 py-5">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
+                                <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Leads Generated</p>
+                                <p className="text-2xl font-black text-[#101828]">{um.generated.toLocaleString()}</p>
+                              </div>
+                              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-center">
+                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Enrichments</p>
+                                <p className="text-2xl font-black text-[#101828]">{um.enriched.toLocaleString()}</p>
+                              </div>
+                              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-center">
+                                <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Exported</p>
+                                <p className="text-2xl font-black text-[#101828]">{um.exported.toLocaleString()}</p>
+                              </div>
+                              <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 text-center">
+                                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Total Actions</p>
+                                <p className="text-2xl font-black text-[#101828]">{um.total.toLocaleString()}</p>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      {user.role !== 'admin' && (
-                        <button onClick={() => toggleSuspension(user)}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                            user.is_suspended ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-rose-50 text-rose-600 hover:bg-rose-100'
-                          }`}>
-                          {user.is_suspended ? 'Reactivate' : 'Suspend'}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                    </React.Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
