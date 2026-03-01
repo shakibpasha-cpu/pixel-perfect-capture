@@ -35,6 +35,21 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
 
   const data = analysis?.enrichedData || lead;
 
+  // Safely convert any value to a displayable string
+  const toStr = (val: unknown): string => {
+    if (val == null) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+    if (typeof val === 'object') {
+      const obj = val as Record<string, unknown>;
+      // Common patterns from AI: {name, description}, {category, technologies}
+      if ('name' in obj) return String(obj.name);
+      if ('title' in obj) return String(obj.title);
+      return Object.values(obj).filter(v => typeof v === 'string').join(' — ') || JSON.stringify(val);
+    }
+    return String(val);
+  };
+
   function getInitials(name: string) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   }
@@ -329,7 +344,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                         {data.runningProjects.map((proj, i) => (
                           <li key={i} className="flex items-start gap-3">
                              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
-                             <span className="text-sm font-bold text-[#101828] leading-snug">{proj}</span>
+                             <span className="text-sm font-bold text-[#101828] leading-snug">{toStr(proj)}</span>
                           </li>
                         ))}
                       </ul>
@@ -347,12 +362,12 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                         {data.futureProjects.map((proj, i) => (
                           <li key={i} className="flex items-start gap-3">
                              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></span>
-                             <span className="text-sm font-bold text-[#101828] leading-snug">{proj}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-xs font-medium text-slate-400 italic">Future roadmap not publicly disclosed.</p>
+                             <span className="text-sm font-bold text-[#101828] leading-snug">{toStr(proj)}</span>
+                           </li>
+                         ))}
+                       </ul>
+                     ) : (
+                       <p className="text-xs font-medium text-slate-400 italic">Future roadmap not publicly disclosed.</p>
                     )}
                  </div>
               </section>
@@ -366,9 +381,9 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                     <div className="flex flex-wrap gap-3">
                        {data.competitors && data.competitors.length > 0 ? (
                          data.competitors.map((comp, i) => (
-                           <span key={i} className="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-100 rounded-xl text-xs font-black uppercase tracking-wide">
-                             {comp}
-                           </span>
+                            <span key={i} className="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-100 rounded-xl text-xs font-black uppercase tracking-wide">
+                              {toStr(comp)}
+                            </span>
                          ))
                        ) : (
                          <p className="text-xs font-medium text-slate-400 italic">Competitive landscape analysis pending.</p>
@@ -383,9 +398,9 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                     <div className="flex flex-wrap gap-3">
                        {data.techStack && data.techStack.length > 0 ? (
                          data.techStack.map((tech, i) => (
-                           <span key={i} className="px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold">
-                             {tech}
-                           </span>
+                            <span key={i} className="px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold">
+                              {toStr(tech)}
+                            </span>
                          ))
                        ) : (
                          <p className="text-xs font-medium text-slate-400 italic">Tech stack unidentified.</p>
