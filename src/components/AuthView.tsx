@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-type AuthMode = 'signin' | 'signup' | 'forgot' | 'verify';
+type AuthMode = 'signin' | 'forgot';
 
 interface AuthViewProps {
   onDemoLogin?: () => void;
