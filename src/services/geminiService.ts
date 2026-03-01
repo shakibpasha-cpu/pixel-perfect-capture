@@ -599,7 +599,7 @@ export class GeminiService {
 
   async enrichLead(lead: Lead): Promise<AnalysisResult> {
     const ai = await this.getAI();
-    const response = await ai.models.generateContent({
+    const response = await this.generateWithRetry(ai, {
       model: "gemini-3-flash-preview",
       contents: `Deep search enrichment for: ${lead.name} in ${lead.location}.
       
@@ -705,7 +705,7 @@ export class GeminiService {
           required: ["summary", "enrichedData", "suggestions"]
         }
       }
-    });
+    }, 2);
     
     try {
       const parsed = JSON.parse(this.cleanJsonString(response.text || '{}'));

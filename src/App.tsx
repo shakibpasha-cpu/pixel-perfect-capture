@@ -471,14 +471,21 @@ const App: React.FC = () => {
 
       {selectedLead && (
         <>
-          <div className="fixed inset-0 bg-[#101828]/40 backdrop-blur-md z-[140]" onClick={() => setSelectedLead(null)}></div>
+          <div className="fixed inset-0 bg-[#101828]/40 backdrop-blur-md z-[140]" onClick={() => {
+            setSelectedLead(null);
+            setAnalysisError(null);
+          }}></div>
           <AnalysisPanel 
             lead={selectedLead}
             analysis={activeAnalysis}
+            analysisError={analysisError}
             isLoading={isAnalyzing}
             onRunAnalysis={(type) => handleRunAnalysis(type)}
             onUpdateLead={handleUpdateLead}
-            onClose={() => setSelectedLead(null)}
+            onClose={() => {
+              setSelectedLead(null);
+              setAnalysisError(null);
+            }}
             onPushToQualification={handlePushToQualification}
           />
         </>
