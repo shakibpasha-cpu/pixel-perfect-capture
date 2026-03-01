@@ -18,6 +18,7 @@ import ProfileView from './components/ProfileView';
 import ImportModal from './components/ImportModal';
 import { Lead, AnalysisResult, AnalysisType } from './types';
 import { gemini } from './services/geminiService';
+import { toast } from 'sonner';
 
 declare global {
   interface AIStudio {

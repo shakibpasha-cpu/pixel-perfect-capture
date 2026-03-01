@@ -712,7 +712,7 @@ export class GeminiService {
           required: ["summary", "enrichedData", "suggestions"]
         }
       }
-    }, 2);
+    }, 5, onRetry);
     
     try {
       const parsed = JSON.parse(this.cleanJsonString(response.text || '{}'));
