@@ -18,6 +18,11 @@ const SuperAdminView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [globalKey, setGlobalKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newDisplayName, setNewDisplayName] = useState('');
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   const fetchUsers = async () => {
     setIsLoading(true);
