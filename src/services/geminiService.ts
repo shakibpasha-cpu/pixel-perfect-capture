@@ -95,13 +95,18 @@ export class GeminiService {
   }
 
   private getRetryDelayMs(attempt: number): number {
-    const baseDelay = 1500;
-    const maxDelay = 12000;
-    const jitter = Math.floor(Math.random() * 700);
+    const baseDelay = 5000;
+    const maxDelay = 60000;
+    const jitter = Math.floor(Math.random() * 2000);
     return Math.min(maxDelay, baseDelay * (2 ** attempt) + jitter);
   }
 
-  private async generateWithRetry(ai: GoogleGenAI, payload: any, maxRetries: number = 2) {
+  private async generateWithRetry(
+    ai: GoogleGenAI,
+    payload: any,
+    maxRetries: number = 5,
+    onRetry?: (attempt: number, waitSec: number) => void
+  ) {
     let lastError: any;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -111,7 +116,9 @@ export class GeminiService {
         lastError = error;
         if (attempt >= maxRetries || !this.isRetryableError(error)) break;
         const waitMs = this.getRetryDelayMs(attempt);
-        console.warn(`[GeminiService] Retry ${attempt + 1}/${maxRetries} after ${waitMs}ms due to rate/temporary error.`);
+        const waitSec = Math.round(waitMs / 1000);
+        console.warn(`[GeminiService] Retry ${attempt + 1}/${maxRetries} after ${waitSec}s due to rate/temporary error.`);
+        onRetry?.(attempt + 1, waitSec);
         await this.sleep(waitMs);
       }
     }
