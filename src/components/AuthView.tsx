@@ -70,9 +70,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
         handleNetworkError();
         return;
       }
-      if (mode === 'signup' && err.message?.includes('already registered')) {
-        setError("User already exists. Please sign in");
-      } else if (mode === 'signin' && err.message?.includes('Invalid login')) {
+      if (mode === 'signin' && err.message?.includes('Invalid login')) {
         setError("Email or password is incorrect");
       } else {
         setError(err.message || "An authentication error occurred");
