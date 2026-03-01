@@ -1,18 +1,6 @@
 
 import React, { useState } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  sendEmailVerification,
-  signInWithPopup,
-  GoogleAuthProvider,
-  OAuthProvider,
-  updateProfile,
-  signOut
-} from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../services/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 type AuthMode = 'signin' | 'signup' | 'forgot' | 'verify';
 
@@ -49,22 +37,6 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
     }, 1500);
   };
 
-  const createUserDocument = async (user: any, additionalData: any = {}) => {
-    try {
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName || additionalData.name || 'User',
-        role: 'user', // Default role
-        isSuspended: false,
-        registeredAt: new Date().toISOString(),
-        ...additionalData
-      }, { merge: true });
-    } catch (e) {
-      console.error("Error creating user document:", e);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     resetMessages();
@@ -72,46 +44,86 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
 
     try {
       if (mode === 'signup') {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        if (userCredential.user) {
-          await updateProfile(userCredential.user, { displayName: name });
-          
-          // Create User Doc in Firestore for Admin Management
-          await createUserDocument(userCredential.user, { name, phone, country, city });
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              display_name: name,
+              phone,
+              country,
+              city,
+            },
+            emailRedirectTo: window.location.origin,
+          }
+        });
 
-          // Send verification email
-          await sendEmailVerification(userCredential.user);
-          
-          // Sign out immediately as per requirement "do not sign in automatically"
-          await signOut(auth);
+        if (signUpError) throw signUpError;
+
+        if (data.user) {
+          // Update profile with additional data
+          try {
+            await supabase.from('profiles').update({
+              phone,
+              country,
+              city,
+            }).eq('id', data.user.id);
+          } catch (e) {
+            console.error("Error updating profile:", e);
+          }
+
+          // Sign out immediately
+          await supabase.auth.signOut();
           
           setVerifyEmailAddress(email);
           setMode('verify');
         }
       } else if (mode === 'signin') {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        
-        // Check if email is verified
-        if (!userCredential.user.emailVerified) {
-          setVerifyEmailAddress(userCredential.user.email || email);
-          await signOut(auth); // Block access
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) throw signInError;
+
+        // Check if email is confirmed
+        if (data.user && !data.user.email_confirmed_at) {
+          setVerifyEmailAddress(data.user.email || email);
+          await supabase.auth.signOut();
           setMode('verify');
           setIsLoading(false);
           return;
         }
+
+        // Check suspension
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('is_suspended')
+          .eq('user_id', data.user.id)
+          .single();
+
+        if (roleData?.is_suspended) {
+          await supabase.auth.signOut();
+          setError("Your account has been suspended. Please contact support.");
+          setIsLoading(false);
+          return;
+        }
       } else if (mode === 'forgot') {
-        await sendPasswordResetEmail(auth, email);
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (resetError) throw resetError;
         setSuccess("Reset link dispatched. Please check your inbox.");
       }
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/network-request-failed') {
+      if (err.message?.includes('fetch') || err.message?.includes('network')) {
         handleNetworkError();
         return;
       }
-      if (mode === 'signup' && err.code === 'auth/email-already-in-use') {
+      if (mode === 'signup' && err.message?.includes('already registered')) {
         setError("User already exists. Please sign in");
-      } else if (mode === 'signin' && (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password')) {
+      } else if (mode === 'signin' && err.message?.includes('Invalid login')) {
         setError("Email or password is incorrect");
       } else {
         setError(err.message || "An authentication error occurred");
@@ -126,54 +138,42 @@ const AuthView: React.FC<AuthViewProps> = ({ onDemoLogin }) => {
   const handleGoogleSignIn = async () => {
     resetMessages();
     setIsLoading(true);
-    const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      // Ensure user doc exists
-      await createUserDocument(result.user);
-
-      // Social providers usually verify emails, but we check anyway to be safe
-      if (!result.user.emailVerified) {
-        setVerifyEmailAddress(result.user.email || '');
-        await signOut(auth);
-        setMode('verify');
-      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        }
+      });
+      if (error) throw error;
     } catch (err: any) {
-      if (err.code === 'auth/network-request-failed') {
+      if (err.message?.includes('fetch') || err.message?.includes('network')) {
         handleNetworkError();
       } else {
         setError(err.message);
       }
-    } finally {
-      if (error !== "Network/Configuration issue detected. Entering Demo Mode...") {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   };
 
   const handleAppleSignIn = async () => {
     resetMessages();
     setIsLoading(true);
-    const provider = new OAuthProvider('apple.com');
     try {
-      const result = await signInWithPopup(auth, provider);
-      await createUserDocument(result.user);
-
-      if (!result.user.emailVerified) {
-        setVerifyEmailAddress(result.user.email || '');
-        await signOut(auth);
-        setMode('verify');
-      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: window.location.origin,
+        }
+      });
+      if (error) throw error;
     } catch (err: any) {
-      if (err.code === 'auth/network-request-failed') {
+      if (err.message?.includes('fetch') || err.message?.includes('network')) {
         handleNetworkError();
       } else {
         setError(err.message);
       }
-    } finally {
-      if (error !== "Network/Configuration issue detected. Entering Demo Mode...") {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   };
 

@@ -1,14 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { updateProfile, updatePassword, User } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../services/firebase';
-import { UserProfile } from '../types';
+import { supabase } from '@/integrations/supabase/client';
 import { UserCircle, Mail, Phone, MapPin, Lock, Save, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 const ProfileView: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
-  const [profileData, setProfileData] = useState<UserProfile | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentEmail, setCurrentEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -30,20 +27,24 @@ const ProfileView: React.FC = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!currentUser) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      setCurrentUserId(user.id);
+      setCurrentEmail(user.email || '');
+
       try {
-        const docRef = doc(db, "users", currentUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data() as UserProfile;
-          setProfileData(data);
-          setName(data.displayName || currentUser.displayName || '');
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (!error && data) {
+          setName(data.display_name || '');
           setPhone(data.phone || '');
           setCountry(data.country || '');
           setCity(data.city || '');
-        } else {
-          // If no doc exists, pre-fill from Auth if available
-          setName(currentUser.displayName || '');
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -52,34 +53,32 @@ const ProfileView: React.FC = () => {
       }
     };
     fetchUserData();
-  }, [currentUser]);
+  }, []);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
+    if (!currentUserId) return;
     setIsSaving(true);
     setSuccessMessage('');
 
     try {
-      // Update Auth Profile
-      if (name !== currentUser.displayName) {
-        await updateProfile(currentUser, { displayName: name });
-      }
+      // Update auth metadata
+      await supabase.auth.updateUser({
+        data: { display_name: name }
+      });
 
-      // Update Firestore Document - Use setDoc with merge to create if missing
-      const userRef = doc(db, "users", currentUser.uid);
-      await setDoc(userRef, {
-        uid: currentUser.uid,
-        email: currentUser.email,
-        displayName: name,
-        phone,
-        country,
-        city,
-        // Preserve essential fields if creating new
-        role: profileData?.role || 'user',
-        isSuspended: profileData?.isSuspended || false,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      // Update profile in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          display_name: name,
+          phone,
+          country,
+          city,
+        })
+        .eq('id', currentUserId);
+
+      if (error) throw error;
 
       setSuccessMessage('Profile details updated successfully.');
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -93,7 +92,6 @@ const ProfileView: React.FC = () => {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
     setPasswordError('');
     setSuccessMessage('');
 
@@ -108,18 +106,15 @@ const ProfileView: React.FC = () => {
 
     setIsChangingPassword(true);
     try {
-      await updatePassword(currentUser, newPassword);
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
       setSuccessMessage('Password updated successfully.');
       setNewPassword('');
       setConfirmPassword('');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error: any) {
       console.error("Error updating password:", error);
-      if (error.code === 'auth/requires-recent-login') {
-        setPasswordError("For security, please sign out and sign in again to change your password.");
-      } else {
-        setPasswordError(error.message || "Failed to update password.");
-      }
+      setPasswordError(error.message || "Failed to update password.");
     } finally {
       setIsChangingPassword(false);
     }
@@ -188,7 +183,7 @@ const ProfileView: React.FC = () => {
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
                   type="email" 
-                  value={currentUser?.email || ''}
+                  value={currentEmail}
                   disabled
                   className="w-full pl-10 pr-4 py-3 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-bold text-slate-500 cursor-not-allowed"
                 />

@@ -1,7 +1,5 @@
-
 import React from 'react';
-import { signOut } from 'firebase/auth';
-import { auth } from '../services/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '../types';
 
 interface HeaderProps {
@@ -17,7 +15,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onSelectKey, currentView, onNavigate, onExportCSV, onImport, leads, isSuperAdmin }) => {
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
     } catch (err) {
       console.error("Error signing out:", err);
     }
